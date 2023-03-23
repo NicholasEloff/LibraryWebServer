@@ -1,6 +1,7 @@
 ﻿using LibraryWebServer.Models;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
+using System.Xml.Linq;
 
 namespace LibraryWebServer.Controllers
 {
@@ -30,7 +31,6 @@ namespace LibraryWebServer.Controllers
         public IActionResult CheckLogin(string name, int cardnum)
         {
             bool loginSuccessful = false;
-            // TODO: Fill in. Determine if login is successful or not.
             using (Team60LibraryContext db = new Team60LibraryContext())
             {
                 var query =
@@ -40,17 +40,19 @@ namespace LibraryWebServer.Controllers
                 foreach (var v in query)
                 {
                     Debug.WriteLine(v);
-                    if(v.Name == name && v.CardNum == cardnum)
+                    if (v.Name == name && v.CardNum == cardnum)
                         loginSuccessful = true;
                 }
             }
 
             if (!loginSuccessful)
             {
+                Debug.WriteLine("Login failed");
                 return Json(new { success = false });
             }
             else
             {
+                Debug.WriteLine("Login success");
                 user = name;
                 card = cardnum;
                 return Json(new { success = true });
@@ -84,9 +86,41 @@ namespace LibraryWebServer.Controllers
         public ActionResult AllTitles()
         {
 
-            // TODO: Implement
+            using (Team60LibraryContext db = new Team60LibraryContext())
+            {
 
-            return Json(null);
+                var query =
+                    from Title in db.Titles
+                    join InventoryItem in db.Inventory on Title.Isbn equals InventoryItem.Isbn into TitlesInventory
+
+
+                    from JoinOneItem in TitlesInventory.DefaultIfEmpty()
+                    join Checkout in db.CheckedOut on JoinOneItem.Serial equals Checkout.Serial into TitlesInventoryCheckout
+
+                    from JoinTwoItem in TitlesInventoryCheckout.DefaultIfEmpty()
+                    join Patron in db.Patrons on JoinTwoItem.CardNum equals Patron.CardNum into TitlesInventoryCheckoutPatrons
+
+                    from FullRow in TitlesInventoryCheckoutPatrons.DefaultIfEmpty()
+
+                    select new
+                    {
+                        Title = Title.Title,
+                        Author = Title.Author,
+                        ISBN = Title.Isbn,
+                        Serial = JoinOneItem == null ? null : (uint?)JoinOneItem.Serial,
+                        Name = FullRow == null ? null : (string?)FullRow.Name
+                    };
+
+                Debug.WriteLine("Title  Author  ISBN   Serial   Name");
+                foreach (var v in query)
+                {
+                    Debug.WriteLine(v);
+                }
+
+                return Json(query.ToArray());
+            }
+
+            //return Json(null);
 
         }
 
@@ -101,8 +135,38 @@ namespace LibraryWebServer.Controllers
         [HttpPost]
         public ActionResult ListMyBooks()
         {
-            // TODO: Implement
-            return Json(null);
+            //select ISBN,Title,Author from CheckedOut natural join Inventory natural join Titles where CardNum =1;
+            //select ISBN,Title,Author from CheckedOut natural join Inventory natural join Titles where CardNum = user;
+            //TODO: implement
+            using (Team60LibraryContext db = new Team60LibraryContext())
+            {
+                var query =
+                    from Serial in db.CheckedOut
+                    join InventoryItem in db.Inventory
+                    on Serial.Serial equals InventoryItem.Serial
+                    into SerialInventory
+
+                    from SI in SerialInventory
+                    join Title in db.Titles
+                    on SI.Isbn equals Title.Isbn
+                    into allData
+
+                    from temp in allData
+                    where Serial.CardNum == card
+
+                    select new
+                    {
+                        ISBN = SI.Isbn,
+                        Title = temp.Title,
+                        Author = temp.Author,
+                        Serial = SI.Serial
+                    };
+
+                foreach (var v in query)
+                    Debug.WriteLine(v);
+                return Json(query.ToArray());
+            }
+            //return Json(query.ToArray());
         }
 
 
