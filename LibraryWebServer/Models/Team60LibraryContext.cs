@@ -27,7 +27,7 @@ public partial class Team60LibraryContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see http://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseMySql("server=atr.eng.utah.edu;user id=u0907154;password=otterbot;database=Team60Library", Microsoft.EntityFrameworkCore.ServerVersion.Parse("10.1.48-mariadb"));
+        => optionsBuilder.UseMySql("server=atr.eng.utah.edu;user id=u0907154;password=pwd;database=Team60Library", Microsoft.EntityFrameworkCore.ServerVersion.Parse("10.1.48-mariadb"));
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
