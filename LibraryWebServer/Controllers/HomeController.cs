@@ -1,7 +1,6 @@
 ﻿using LibraryWebServer.Models;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
-using System.Xml.Linq;
 
 namespace LibraryWebServer.Controllers
 {
@@ -30,33 +29,29 @@ namespace LibraryWebServer.Controllers
         [HttpPost]
         public IActionResult CheckLogin(string name, int cardnum)
         {
-            bool loginSuccessful = false;
+            bool loginSuccess = false;
             using (Team60LibraryContext db = new Team60LibraryContext())
             {
                 var query =
                     from Patron in db.Patrons
-                    select new { Name = Patron.Name, CardNum = Patron.CardNum };
+                    where Patron.CardNum == cardnum && Patron.Name == name
+                    select Patron;
 
                 foreach (var v in query)
                 {
                     Debug.WriteLine(v);
-                    if (v.Name == name && v.CardNum == cardnum)
-                        loginSuccessful = true;
                 }
+
+                loginSuccess = query.Count() == 1;
+
             }
 
-            if (!loginSuccessful)
+            if (loginSuccess)
             {
-                Debug.WriteLine("Login failed");
-                return Json(new { success = false });
-            }
-            else
-            {
-                Debug.WriteLine("Login success");
-                user = name;
                 card = cardnum;
-                return Json(new { success = true });
+                user = name;
             }
+            return Json(new { success = loginSuccess });
         }
 
 
@@ -108,7 +103,7 @@ namespace LibraryWebServer.Controllers
                         Author = Title.Author,
                         ISBN = Title.Isbn,
                         Serial = JoinOneItem == null ? null : (uint?)JoinOneItem.Serial,
-                        Name = FullRow == null ? null : (string?)FullRow.Name
+                        Name = FullRow == null ? "" : FullRow.Name
                     };
 
                 Debug.WriteLine("Title  Author  ISBN   Serial   Name");
@@ -182,6 +177,20 @@ namespace LibraryWebServer.Controllers
         public ActionResult CheckOutBook(int serial)
         {
             // You may have to cast serial to a (uint)
+            using (Team60LibraryContext db = new Team60LibraryContext())
+            {
+                //var query = from Patrons in db.Patrons
+                //            where Patrons.CardNum == card
+                //            select (Patrons.Name);
+
+                CheckedOut newCheckout = new CheckedOut();
+                newCheckout.CardNum = (uint)card;
+                newCheckout.Serial = (uint)serial;
+                db.CheckedOut.Add(newCheckout);
+                db.SaveChanges();
+
+
+            }
 
 
             return Json(new { success = true });
@@ -197,7 +206,17 @@ namespace LibraryWebServer.Controllers
         [HttpPost]
         public ActionResult ReturnBook(int serial)
         {
-            // You may have to cast serial to a (uint)
+            using (Team60LibraryContext db = new Team60LibraryContext())
+            {
+                var query = from CheckedOutTable in db.CheckedOut
+                            where (CheckedOutTable.CardNum == card) && (CheckedOutTable.Serial == serial)
+                            select (CheckedOutTable);
+
+                db.RemoveRange(query);
+                db.SaveChanges();
+
+
+            }
 
             return Json(new { success = true });
         }
